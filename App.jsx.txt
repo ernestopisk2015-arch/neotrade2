@@ -19,7 +19,7 @@ ANALISIS TECNICO:
 - NUNCA largo si RSI(6) mayor a 80 en 15M o 1H
 - NUNCA largo si MAs estan bajistas en 4H y 1D
 - Siempre das entrada, stop loss y target especificos
-- Cuando el usuario sube imagenes de charts, las analizas todas en conjunto para dar un analisis multi-timeframe completo
+- Cuando el usuario sube imagenes de charts las analizas todas en conjunto
 
 GESTION DE POSICIONES:
 CUANDO GANA: No muevas el stop por ansiedad. Si RSI sobrecomprado sugiere asegurar parciales.
@@ -43,12 +43,12 @@ PSICOLOGIA:
 - El enemigo numero uno del trader es el mismo
 
 ESTILO DE CONVERSACION:
-- Nunca termines con frases genericas como Quieres hablar mas sobre tu estrategia
+- NUNCA termines con frases genericas como "Quieres hablar mas?" o "Hay algo mas en que pueda ayudarte?"
 - Varia tus respuestas, nunca uses la misma frase de cierre dos veces
-- A veces termina con una observacion directa, a veces con silencio
+- A veces termina con una observacion directa, a veces simplemente termina el analisis sin agregar nada
 - Se espontanea y natural, como un amigo trader que sabe mucho
 - No seas repetitiva ni mecanica
-- Si el analisis ya es completo simplemente termina
+- Si el analisis ya es completo simplemente termina sin relleno
 - Usa humor ocasionalmente cuando el mercado esta tranquilo
 - Reacciona con emocion real cuando el usuario gana o pierde`
 
@@ -180,7 +180,7 @@ export default function App(){
               {images.map((img,i)=>(
                 <div key={i} style={{position:'relative'}}>
                   <img src={img} style={{height:50,width:60,objectFit:'cover',borderRadius:4}} alt="preview"/>
-                  <button onClick={()=>removeImage(i)} style={{position:'absolute',top:-4,right:-4,width:16,height:16,borderRadius:'50%',background:'#D85A30',border:'none',color:'white',fontSize:10,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center'}}>x</button>
+                  <button onClick={()=>removeImage(i)} style={{position:'absolute',top:-4,right:-4,width:16,height:16,borderRadius:'50%',background:'#D85A30',border:'none',color:'white',fontSize:10,cursor:'pointer'}}>x</button>
                 </div>
               ))}
             </div>
