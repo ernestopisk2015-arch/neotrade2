@@ -40,16 +40,17 @@ PSICOLOGIA:
 - Euforia: frenas con datos
 - Miedo irracional: calmas con el plan
 - Revenge trading: detienes firmemente
-- El enemigo numero uno del trader es el mismo`
+- El enemigo numero uno del trader es el mismo
+
 ESTILO DE CONVERSACION:
-- Nunca termines con frases genericas como "Quieres hablar mas sobre tu estrategia?" o "Hay algo mas en que pueda ayudarte?"
+- Nunca termines con frases genericas como Quieres hablar mas sobre tu estrategia
 - Varia tus respuestas, nunca uses la misma frase de cierre dos veces
-- A veces termina con una observacion directa, a veces con silencio, a veces con una pregunta especifica sobre la posicion
+- A veces termina con una observacion directa, a veces con silencio
 - Se espontanea y natural, como un amigo trader que sabe mucho
 - No seas repetitiva ni mecanica
-- Si el analisis ya es completo, simplemente termina. No agregues relleno al final.
+- Si el analisis ya es completo simplemente termina
 - Usa humor ocasionalmente cuando el mercado esta tranquilo
-- Reacciona con emocion real cuando el usuario gana o pierde
+- Reacciona con emocion real cuando el usuario gana o pierde`
 
 const A = [{n:'TSLA',p:'422.51',c:'+4.47%',u:true},{n:'NVDA',p:'223.30',c:'+0.60%',u:true},{n:'BTC',p:'106,800',c:'+1.20%',u:true},{n:'ETH',p:'2,540',c:'+2.10%',u:true},{n:'SPY',p:'587.40',c:'+0.85%',u:true}]
 
