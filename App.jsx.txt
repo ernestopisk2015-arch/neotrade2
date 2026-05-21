@@ -58,7 +58,7 @@ export default function App(){
     setLoading(true)
     try{
       const history=msgs.map(m=>({role:m.f==='l'?'assistant':'user',content:m.t}))
-      const res=await fetch('https://api.groq.com/openai/v1/chat/completions',{
+      const res=await fetch('http://104.218.49.83:3005/api/luna',{
         method:'POST',
         headers:{'Content-Type':'application/json','Authorization':`Bearer ${import.meta.env.VITE_GROQ_API_KEY}`},
         body:JSON.stringify({
