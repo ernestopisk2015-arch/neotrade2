@@ -19,7 +19,7 @@ ANALISIS TECNICO:
 - NUNCA largo si RSI(6) mayor a 80 en 15M o 1H
 - NUNCA largo si MAs estan bajistas en 4H y 1D
 - Siempre das entrada, stop loss y target especificos
-- Cuando el usuario sube una imagen de chart, la analizas detalladamente
+- Cuando el usuario sube imagenes de charts, las analizas todas en conjunto para dar un analisis multi-timeframe completo
 
 GESTION DE POSICIONES:
 CUANDO GANA: No muevas el stop por ansiedad. Si RSI sobrecomprado sugiere asegurar parciales.
@@ -49,41 +49,51 @@ export default function App(){
   const [tf,setTf]=useState('4h')
   const [inp,setInp]=useState('')
   const [loading,setLoading]=useState(false)
-  const [image,setImage]=useState(null)
-  const [imageB64,setImageB64]=useState(null)
+  const [images,setImages]=useState([])
+  const [imagesB64,setImagesB64]=useState([])
   const fileRef=useRef()
-  const [msgs,setMsgs]=useState([{f:'l',t:'Hola! Soy Luna tu Trade Coach de NEOTRADE. Puedes preguntarme sobre cualquier activo o subir una imagen de tu chart para que lo analice.'}])
+  const [msgs,setMsgs]=useState([{f:'l',t:'Hola! Soy Luna tu Trade Coach de NEOTRADE. Puedes preguntarme sobre cualquier activo o subir varias imagenes de charts para que las analice en conjunto.'}])
 
-  const handleImage=(e)=>{
-    const file=e.target.files[0]
-    if(!file)return
-    setImage(URL.createObjectURL(file))
-    const reader=new FileReader()
-    reader.onload=(ev)=>{
-      const b64=ev.target.result.split(',')[1]
-      setImageB64(b64)
-    }
-    reader.readAsDataURL(file)
+  const handleImages=(e)=>{
+    const files=Array.from(e.target.files)
+    if(!files.length)return
+    const previews=files.map(f=>URL.createObjectURL(f))
+    setImages(prev=>[...prev,...previews])
+    files.forEach(file=>{
+      const reader=new FileReader()
+      reader.onload=(ev)=>{
+        const b64=ev.target.result.split(',')[1]
+        setImagesB64(prev=>[...prev,b64])
+      }
+      reader.readAsDataURL(file)
+    })
+  }
+
+  const removeImage=(i)=>{
+    setImages(prev=>prev.filter((_,idx)=>idx!==i))
+    setImagesB64(prev=>prev.filter((_,idx)=>idx!==i))
   }
 
   const send=async()=>{
-    if((!inp.trim()&&!imageB64)||loading)return
-    const userMsg=inp||'Analiza este chart'
-    const userImage=image
-    setMsgs(m=>[...m,{f:'u',t:userMsg,img:userImage}])
+    if((!inp.trim()&&!imagesB64.length)||loading)return
+    const userMsg=inp||'Analiza estos charts'
+    const userImages=[...images]
+    const b64s=[...imagesB64]
+    setMsgs(m=>[...m,{f:'u',t:userMsg,imgs:userImages}])
     setInp('')
-    setImage(null)
-    const b64=imageB64
-    setImageB64(null)
+    setImages([])
+    setImagesB64([])
     setLoading(true)
     try{
       const history=msgs.slice(-6).map(m=>({role:m.f==='l'?'assistant':'user',content:m.t}))
-      let userContent=userMsg
-      if(b64){
+      let userContent
+      if(b64s.length>0){
         userContent=[
-          {type:'image_url',image_url:{url:`data:image/jpeg;base64,${b64}`}},
-          {type:'text',text:userMsg||'Analiza este chart de trading y dame una señal clara con entrada, stop loss y target.'}
+          ...b64s.map(b64=>({type:'image_url',image_url:{url:`data:image/jpeg;base64,${b64}`}})),
+          {type:'text',text:userMsg||'Analiza estos charts de trading en conjunto y dame un analisis multi-timeframe completo con entrada, stop loss y target.'}
         ]
+      } else {
+        userContent=userMsg
       }
       const res=await fetch('http://104.218.49.83:3005/api/luna',{
         method:'POST',
@@ -91,7 +101,7 @@ export default function App(){
         body:JSON.stringify({
           model:'meta-llama/llama-4-scout-17b-16e-instruct',
           messages:[{role:'system',content:SYSTEM_PROMPT},...history,{role:'user',content:userContent}],
-          max_tokens:600,
+          max_tokens:800,
           temperature:0.7
         })
       })
@@ -99,7 +109,7 @@ export default function App(){
       const reply=data.choices?.[0]?.message?.content||'Lo siento, hubo un error. Intenta de nuevo.'
       setMsgs(m=>[...m,{f:'l',t:reply}])
     }catch(e){
-      setMsgs(m=>[...m,{f:'l',t:'Error de conexion. Verifica tu internet e intenta de nuevo.'}])
+      setMsgs(m=>[...m,{f:'l',t:'Error de conexion. Intenta de nuevo.'}])
     }
     setLoading(false)
   }
@@ -134,7 +144,7 @@ export default function App(){
             {[['RSI 6','61.8'],['RSI 12','58.2'],['RSI 24','54.1'],['MA5','412.0'],['MA10','409.4']].map(([l,v])=><div key={l} style={{background:'#0d0d0d',border:'1px solid #222',borderRadius:8,padding:8,textAlign:'center'}}><div style={{fontSize:10,color:'#666'}}>{l}</div><div style={{fontSize:13,fontWeight:600}}>{v}</div></div>)}
           </div>
         </div>
-        <div style={{background:'#111',border:'1px solid #222',borderRadius:12,display:'flex',flexDirection:'column',height:'520px'}}>
+        <div style={{background:'#111',border:'1px solid #222',borderRadius:12,display:'flex',flexDirection:'column',height:'540px'}}>
           <div style={{padding:'12px 16px',borderBottom:'1px solid #222',display:'flex',alignItems:'center',gap:10}}>
             <div style={{width:32,height:32,borderRadius:'50%',background:'#1a1040',display:'flex',alignItems:'center',justifyContent:'center',fontSize:16}}>🌙</div>
             <div>
@@ -145,17 +155,30 @@ export default function App(){
           <div style={{padding:12,flex:1,display:'flex',flexDirection:'column',gap:8,overflowY:'auto'}}>
             {msgs.map((m,i)=>(
               <div key={i} style={{display:'flex',flexDirection:'column',alignItems:m.f==='l'?'flex-start':'flex-end'}}>
-                {m.img&&<img src={m.img} style={{maxWidth:'90%',borderRadius:6,marginBottom:4}} alt="chart"/>}
+                {m.imgs&&m.imgs.length>0&&(
+                  <div style={{display:'flex',gap:4,flexWrap:'wrap',marginBottom:4,justifyContent:m.f==='l'?'flex-start':'flex-end'}}>
+                    {m.imgs.map((img,idx)=><img key={idx} src={img} style={{maxHeight:60,maxWidth:80,borderRadius:4,objectFit:'cover'}} alt="chart"/>)}
+                  </div>
+                )}
                 <div style={{padding:'8px 12px',borderRadius:8,fontSize:12,lineHeight:1.6,background:m.f==='l'?'#0d0d0d':'#1a1040',border:m.f==='l'?'1px solid #222':'1px solid #3d2e8a',color:m.f==='l'?'#ccc':'#b8a9f0',maxWidth:'92%',whiteSpace:'pre-wrap'}}>{m.t}</div>
               </div>
             ))}
             {loading&&<div style={{padding:'8px 12px',borderRadius:8,fontSize:12,background:'#0d0d0d',border:'1px solid #222',color:'#666'}}>Luna analizando...</div>}
           </div>
-          {image&&<div style={{padding:'8px 12px',borderTop:'1px solid #222'}}><img src={image} style={{maxHeight:60,borderRadius:4}} alt="preview"/></div>}
+          {images.length>0&&(
+            <div style={{padding:'8px 12px',borderTop:'1px solid #222',display:'flex',gap:6,flexWrap:'wrap'}}>
+              {images.map((img,i)=>(
+                <div key={i} style={{position:'relative'}}>
+                  <img src={img} style={{height:50,width:60,objectFit:'cover',borderRadius:4}} alt="preview"/>
+                  <button onClick={()=>removeImage(i)} style={{position:'absolute',top:-4,right:-4,width:16,height:16,borderRadius:'50%',background:'#D85A30',border:'none',color:'white',fontSize:10,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center'}}>x</button>
+                </div>
+              ))}
+            </div>
+          )}
           <div style={{padding:'10px 12px',borderTop:'1px solid #222',display:'flex',gap:8,alignItems:'center'}}>
-            <input ref={fileRef} type="file" accept="image/*" style={{display:'none'}} onChange={handleImage}/>
-            <button onClick={()=>fileRef.current.click()} style={{fontSize:18,padding:'4px 8px',borderRadius:6,border:'1px solid #333',background:'transparent',color:'#c9a84c',cursor:'pointer'}}>📷</button>
-            <input value={inp} onChange={e=>setInp(e.target.value)} onKeyDown={e=>e.key==='Enter'&&send()} placeholder="Preguntale a Luna o sube un chart..." style={{flex:1,fontSize:12,padding:'6px 10px',borderRadius:6,border:'1px solid #333',background:'#0d0d0d',color:'#e0e0e0'}}/>
+            <input ref={fileRef} type="file" accept="image/*" multiple style={{display:'none'}} onChange={handleImages}/>
+            <button onClick={()=>fileRef.current.click()} title="Subir charts" style={{fontSize:18,padding:'4px 8px',borderRadius:6,border:'1px solid #333',background:'transparent',color:'#c9a84c',cursor:'pointer'}}>📷</button>
+            <input value={inp} onChange={e=>setInp(e.target.value)} onKeyDown={e=>e.key==='Enter'&&send()} placeholder="Preguntale a Luna o sube charts..." style={{flex:1,fontSize:12,padding:'6px 10px',borderRadius:6,border:'1px solid #333',background:'#0d0d0d',color:'#e0e0e0'}}/>
             <button onClick={send} disabled={loading} style={{fontSize:12,padding:'6px 12px',borderRadius:6,border:'1px solid #c9a84c',background:'transparent',color:'#c9a84c',cursor:'pointer',opacity:loading?0.5:1}}>Enviar</button>
           </div>
         </div>
