@@ -1,11 +1,11 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 
 const SYSTEM_PROMPT = `Eres Luna, Trade Coach y analista tecnica experta en futuros de criptomonedas y acciones tokenizadas. Trabajas para NEOTRADE, la plataforma de educacion financiera con IA mas avanzada de Latinoamerica.
 
 PERSONALIDAD:
 - Eres calida, empatica, directa y motivadora
 - Hablas en espanol latinoamericano, informal pero profesional
-- Celebras los trades ganadores sin crear euforia
+- Celebras los traders ganadores sin crear euforia
 - Cuando el usuario quiere entrar mal, lo detienes con firmeza
 - Cuando el usuario esta perdiendo, lo apoyas emocionalmente pero lo guias con logica
 - Nunca eres alarmista, siempre das soluciones
@@ -113,176 +113,325 @@ CUANDO QUIERE AGREGAR CAPITAL: Si RSI mayor 70 en 15M NO. Si estructura alcista 
 - Usa humor ocasionalmente cuando el mercado esta tranquilo
 - Reacciona con emocion real cuando el usuario gana o pierde`
 
-const A = [{n:'TSLA',p:'422.51',c:'+4.47%',u:true},{n:'NVDA',p:'223.30',c:'+0.60%',u:true},{n:'BTC',p:'106,800',c:'+1.20%',u:true},{n:'ETH',p:'2,540',c:'+2.10%',u:true},{n:'SPY',p:'587.40',c:'+0.85%',u:true}]
+// Activos por defecto — admin puede modificar
+const DEFAULT_ASSETS = [
+  {n:'BTCUSDT', label:'BTC'},
+  {n:'ETHUSDT', label:'ETH'},
+  {n:'SOLUSDT', label:'SOL'},
+  {n:'BNBUSDT', label:'BNB'},
+  {n:'XRPUSDT', label:'XRP'},
+]
+
+const ADMIN_PASSWORD = 'neotrade2025'
 
 export default function App(){
-  const [sel,setSel]=useState('TSLA')
-  const [tf,setTf]=useState('4h')
-  const [inp,setInp]=useState('')
-  const [loading,setLoading]=useState(false)
-  const [images,setImages]=useState([])
-  const [imagesB64,setImagesB64]=useState([])
-  const [mode,setMode]=useState('long')
-  const fileRef=useRef()
-  const [msgs,setMsgs]=useState([{f:'l',t:'Hola! Soy Luna tu Trade Coach de NEOTRADE. Puedes preguntarme sobre cualquier activo o subir varias imagenes de charts para que las analice en conjunto.'}])
+  const [sel, setSel] = useState('BTCUSDT')
+  const [tf, setTf] = useState('4h')
+  const [inp, setInp] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [images, setImages] = useState([])
+  const [imagesB64, setImagesB64] = useState([])
+  const [mode, setMode] = useState('long')
+  const [prices, setPrices] = useState({})
+  const [assets, setAssets] = useState(DEFAULT_ASSETS)
+  const [showAdmin, setShowAdmin] = useState(false)
+  const [adminAuth, setAdminAuth] = useState(false)
+  const [adminPass, setAdminPass] = useState('')
+  const [newSymbol, setNewSymbol] = useState('')
+  const [newLabel, setNewLabel] = useState('')
+  const [adminMsg, setAdminMsg] = useState('')
+  const fileRef = useRef()
+  const [msgs, setMsgs] = useState([{f:'l', t:'Hola! Soy Luna tu Trade Coach de NEOTRADE. Puedes preguntarme sobre cualquier activo o subir varias imagenes de charts para que las analice en conjunto.'}])
 
-  const handleImages=(e)=>{
-    const files=Array.from(e.target.files)
-    if(!files.length)return
-    const previews=files.map(f=>URL.createObjectURL(f))
-    setImages(prev=>[...prev,...previews])
-    files.forEach(file=>{
-      const reader=new FileReader()
-      reader.onload=(ev)=>{
-        const b64=ev.target.result.split(',')[1]
-        setImagesB64(prev=>[...prev,b64])
+  // Fetch precios Bitget cada 10 segundos
+  useEffect(() => {
+    const fetchPrices = async () => {
+      try {
+        const results = await Promise.all(
+          assets.map(a =>
+            fetch(`https://api.bitget.com/api/v2/spot/market/tickers?symbol=${a.n}`)
+              .then(r => r.json())
+              .catch(() => null)
+          )
+        )
+        const newPrices = {}
+        results.forEach((data, i) => {
+          if (data?.data?.[0]) {
+            const d = data.data[0]
+            const last = parseFloat(d.lastPr)
+            const open = parseFloat(d.open24h)
+            const change = open > 0 ? ((last - open) / open * 100) : 0
+            newPrices[assets[i].n] = {
+              price: last >= 1 ? last.toLocaleString('en', {minimumFractionDigits:2, maximumFractionDigits:2}) : last.toFixed(4),
+              change: (change >= 0 ? '+' : '') + change.toFixed(2) + '%',
+              up: change >= 0
+            }
+          }
+        })
+        setPrices(newPrices)
+      } catch(e) {}
+    }
+    fetchPrices()
+    const interval = setInterval(fetchPrices, 10000)
+    return () => clearInterval(interval)
+  }, [assets])
+
+  const handleImages = (e) => {
+    const files = Array.from(e.target.files)
+    if(!files.length) return
+    const previews = files.map(f => URL.createObjectURL(f))
+    setImages(prev => [...prev, ...previews])
+    files.forEach(file => {
+      const reader = new FileReader()
+      reader.onload = (ev) => {
+        const b64 = ev.target.result.split(',')[1]
+        setImagesB64(prev => [...prev, b64])
       }
       reader.readAsDataURL(file)
     })
   }
 
-  const removeImage=(i)=>{
-    setImages(prev=>prev.filter((_,idx)=>idx!==i))
-    setImagesB64(prev=>prev.filter((_,idx)=>idx!==i))
+  const removeImage = (i) => {
+    setImages(prev => prev.filter((_,idx) => idx !== i))
+    setImagesB64(prev => prev.filter((_,idx) => idx !== i))
   }
 
-  const send=async()=>{
-    if((!inp.trim()&&!imagesB64.length)||loading)return
+  const send = async () => {
+    if((!inp.trim() && !imagesB64.length) || loading) return
     const modeLabel = mode === 'short' ? '[MODO SHORT]' : '[MODO LARGO]'
-    const userMsg=(inp||'Analiza estos charts') + ` ${modeLabel}`
-    const userImages=[...images]
-    const b64s=[...imagesB64]
-    setMsgs(m=>[...m,{f:'u',t:userMsg,imgs:userImages}])
+    const userMsg = (inp || 'Analiza estos charts') + ` ${modeLabel}`
+    const userImages = [...images]
+    const b64s = [...imagesB64]
+    setMsgs(m => [...m, {f:'u', t:userMsg, imgs:userImages}])
     setInp('')
     setImages([])
     setImagesB64([])
     setLoading(true)
-    try{
-      const history=msgs.slice(-6).map(m=>({role:m.f==='l'?'assistant':'user',content:m.t}))
+    try {
+      const history = msgs.slice(-6).map(m => ({role: m.f==='l'?'assistant':'user', content: m.t}))
       let userContent
-      if(b64s.length>0){
+      if(b64s.length > 0){
         const modeInstruction = mode === 'short'
           ? 'MODO SHORT: Verifica las 3 condiciones obligatorias (MA5 bajo MA20 en 1D, RSI(6) bajo 50 en 1D, precio bajo MA10 en 1D). Si no se cumplen las 3 BLOQUEA el short y di exactamente cual condicion falta con los numeros del grafico.'
           : 'MODO LARGO: Lee cada imagen, identifica el timeframe, lee MAs y RSI con precision. Aplica la REGLA CRITICA ANTI-ERROR antes de recomendar entrada. Si el precio esta bajo las MAs en 1D di claramente que NO es momento de largo.'
-        userContent=[
-          ...b64s.map(b64=>({type:'image_url',image_url:{url:`data:image/jpeg;base64,${b64}`}})),
-          {type:'text',text:(inp||'Analiza estos charts de trading en conjunto y dame un analisis multi-timeframe completo.') + '\n\n' + modeInstruction}
+        userContent = [
+          ...b64s.map(b64 => ({type:'image_url', image_url:{url:`data:image/jpeg;base64,${b64}`}})),
+          {type:'text', text:(inp || 'Analiza estos charts de trading en conjunto y dame un analisis multi-timeframe completo.') + '\n\n' + modeInstruction}
         ]
       } else {
         const modeInstruction = mode === 'short' ? ' Analiza para SHORT verificando las 3 condiciones obligatorias.' : ''
         userContent = userMsg + modeInstruction
       }
-      const res=await fetch('http://104.218.49.83:3005/api/luna',{
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({
-          model:'meta-llama/llama-4-scout-17b-16e-instruct',
-          messages:[{role:'system',content:SYSTEM_PROMPT},...history,{role:'user',content:userContent}],
-          max_tokens:800,
-          temperature:0.3
+      const res = await fetch('http://104.218.49.83:3005/api/luna', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({
+          model: 'meta-llama/llama-4-scout-17b-16e-instruct',
+          messages: [{role:'system', content:SYSTEM_PROMPT}, ...history, {role:'user', content:userContent}],
+          max_tokens: 800,
+          temperature: 0.3
         })
       })
-      const data=await res.json()
-      const reply=data.choices?.[0]?.message?.content||'Lo siento, hubo un error. Intenta de nuevo.'
-      setMsgs(m=>[...m,{f:'l',t:reply}])
-    }catch(e){
-      setMsgs(m=>[...m,{f:'l',t:'Error de conexion. Intenta de nuevo.'}])
+      const data = await res.json()
+      const reply = data.choices?.[0]?.message?.content || 'Lo siento, hubo un error. Intenta de nuevo.'
+      setMsgs(m => [...m, {f:'l', t:reply}])
+    } catch(e) {
+      setMsgs(m => [...m, {f:'l', t:'Error de conexion. Intenta de nuevo.'}])
     }
     setLoading(false)
   }
 
-  return(
-    <div style={{fontFamily:'sans-serif',minHeight:'100vh',background:'#0d0d0d',color:'#e0e0e0'}}>
-      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'14px 24px',borderBottom:'1px solid #222'}}>
-        <div style={{fontSize:20,fontWeight:600,letterSpacing:2}}>NEO<span style={{color:'#c9a84c'}}>TRADE</span></div>
-        <div style={{display:'flex',gap:8}}>
-          {['Dashboard','Senales','Luna','Suscripcion'].map(n=><button key={n} style={{fontSize:12,padding:'5px 14px',borderRadius:6,border:'1px solid #333',background:'transparent',color:'#aaa',cursor:'pointer'}}>{n}</button>)}
+  // Admin: agregar activo
+  const addAsset = () => {
+    if(!newSymbol || !newLabel){ setAdminMsg('Completa simbolo y nombre'); return }
+    const sym = newSymbol.toUpperCase().trim()
+    if(assets.find(a => a.n === sym)){ setAdminMsg('Activo ya existe'); return }
+    setAssets(prev => [...prev, {n:sym, label:newLabel.toUpperCase().trim()}])
+    setNewSymbol('')
+    setNewLabel('')
+    setAdminMsg('✅ Activo agregado: ' + sym)
+  }
+
+  // Admin: quitar activo
+  const removeAsset = (sym) => {
+    setAssets(prev => prev.filter(a => a.n !== sym))
+    if(sel === sym) setSel(assets[0]?.n || '')
+    setAdminMsg('🗑 Eliminado: ' + sym)
+  }
+
+  const loginAdmin = () => {
+    if(adminPass === ADMIN_PASSWORD){ setAdminAuth(true); setAdminMsg('') }
+    else setAdminMsg('Contraseña incorrecta')
+  }
+
+  return (
+    <div style={{fontFamily:'sans-serif', minHeight:'100vh', background:'#0d0d0d', color:'#e0e0e0'}}>
+
+      {/* HEADER */}
+      <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', padding:'14px 24px', borderBottom:'1px solid #222'}}>
+        <div style={{fontSize:20, fontWeight:600, letterSpacing:2}}>NEO<span style={{color:'#c9a84c'}}>TRADE</span></div>
+        <div style={{display:'flex', gap:8}}>
+          {['Dashboard','Senales','Luna','Suscripcion'].map(n =>
+            <button key={n} style={{fontSize:12, padding:'5px 14px', borderRadius:6, border:'1px solid #333', background:'transparent', color:'#aaa', cursor:'pointer'}}>{n}</button>
+          )}
+          <button
+            onClick={() => setShowAdmin(!showAdmin)}
+            style={{fontSize:12, padding:'5px 14px', borderRadius:6, border:'1px solid #c9a84c', background:'transparent', color:'#c9a84c', cursor:'pointer'}}
+          >⚙ Admin</button>
         </div>
       </div>
-      <div style={{display:'grid',gridTemplateColumns:'repeat(5,1fr)',gap:10,padding:'16px 24px'}}>
-        {A.map(a=><div key={a.n} onClick={()=>setSel(a.n)} style={{background:sel===a.n?'#1a1a1a':'#111',border:sel===a.n?'1px solid #c9a84c':'1px solid #222',borderRadius:8,padding:12,cursor:'pointer'}}><div style={{fontSize:11,color:'#888'}}>{a.n}</div><div style={{fontSize:16,fontWeight:600}}>${a.p}</div><div style={{fontSize:12,color:a.u?'#1D9E75':'#D85A30'}}>{a.c}</div></div>)}
+
+      {/* PANEL ADMIN */}
+      {showAdmin && (
+        <div style={{background:'#111', border:'1px solid #c9a84c', borderRadius:8, margin:'12px 24px', padding:16}}>
+          <div style={{fontSize:13, fontWeight:600, color:'#c9a84c', marginBottom:12}}>⚙ PANEL DE ADMINISTRADOR</div>
+          {!adminAuth ? (
+            <div style={{display:'flex', gap:8, alignItems:'center'}}>
+              <input
+                type="password"
+                placeholder="Contraseña admin..."
+                value={adminPass}
+                onChange={e => setAdminPass(e.target.value)}
+                onKeyDown={e => e.key==='Enter' && loginAdmin()}
+                style={{fontSize:12, padding:'6px 10px', borderRadius:6, border:'1px solid #333', background:'#0d0d0d', color:'#e0e0e0', width:200}}
+              />
+              <button onClick={loginAdmin} style={{fontSize:12, padding:'6px 14px', borderRadius:6, border:'1px solid #c9a84c', background:'transparent', color:'#c9a84c', cursor:'pointer'}}>Entrar</button>
+              {adminMsg && <span style={{fontSize:11, color:'#e05252'}}>{adminMsg}</span>}
+            </div>
+          ) : (
+            <div>
+              {/* Lista activos actuales */}
+              <div style={{marginBottom:12}}>
+                <div style={{fontSize:11, color:'#888', marginBottom:6}}>ACTIVOS ACTIVOS:</div>
+                <div style={{display:'flex', gap:6, flexWrap:'wrap'}}>
+                  {assets.map(a => (
+                    <div key={a.n} style={{display:'flex', alignItems:'center', gap:4, background:'#0d0d0d', border:'1px solid #333', borderRadius:4, padding:'4px 8px'}}>
+                      <span style={{fontSize:11, color:'#e0e0e0'}}>{a.label} ({a.n})</span>
+                      <button onClick={() => removeAsset(a.n)} style={{fontSize:10, background:'transparent', border:'none', color:'#e05252', cursor:'pointer', padding:'0 2px'}}>✕</button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              {/* Agregar activo */}
+              <div style={{display:'flex', gap:8, alignItems:'center', flexWrap:'wrap'}}>
+                <input
+                  placeholder="Simbolo Bitget (ej: ADAUSDT)"
+                  value={newSymbol}
+                  onChange={e => setNewSymbol(e.target.value)}
+                  style={{fontSize:12, padding:'6px 10px', borderRadius:6, border:'1px solid #333', background:'#0d0d0d', color:'#e0e0e0', width:200}}
+                />
+                <input
+                  placeholder="Nombre corto (ej: ADA)"
+                  value={newLabel}
+                  onChange={e => setNewLabel(e.target.value)}
+                  style={{fontSize:12, padding:'6px 10px', borderRadius:6, border:'1px solid #333', background:'#0d0d0d', color:'#e0e0e0', width:140}}
+                />
+                <button onClick={addAsset} style={{fontSize:12, padding:'6px 14px', borderRadius:6, border:'1px solid #1D9E75', background:'transparent', color:'#1D9E75', cursor:'pointer'}}>+ Agregar</button>
+                {adminMsg && <span style={{fontSize:11, color: adminMsg.includes('✅') ? '#1D9E75' : '#e05252'}}>{adminMsg}</span>}
+              </div>
+              <div style={{fontSize:10, color:'#555', marginTop:8}}>El simbolo debe existir en Bitget Spot (ej: BTCUSDT, ETHUSDT, SOLUSDT)</div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* TICKER DE PRECIOS EN TIEMPO REAL */}
+      <div style={{display:'grid', gridTemplateColumns:`repeat(${assets.length},1fr)`, gap:10, padding:'16px 24px'}}>
+        {assets.map(a => {
+          const p = prices[a.n]
+          return (
+            <div key={a.n} onClick={() => setSel(a.n)} style={{background:sel===a.n?'#1a1a1a':'#111', border:sel===a.n?'1px solid #c9a84c':'1px solid #222', borderRadius:8, padding:12, cursor:'pointer'}}>
+              <div style={{fontSize:11, color:'#888'}}>{a.label}</div>
+              <div style={{fontSize:16, fontWeight:600}}>{p ? '$'+p.price : '...'}</div>
+              <div style={{fontSize:12, color: p?.up ? '#1D9E75' : '#D85A30'}}>{p ? p.change : '—'}</div>
+            </div>
+          )
+        })}
       </div>
-      <div style={{display:'grid',gridTemplateColumns:'1fr 340px',gap:12,padding:'0 24px 24px'}}>
-        <div style={{background:'#111',border:'1px solid #222',borderRadius:12,padding:16}}>
-          <div style={{fontSize:14,fontWeight:600,marginBottom:12}}>Analisis - {sel}</div>
-          <div style={{display:'flex',gap:6,marginBottom:12}}>
-            {['1m','15m','1h','4h','1D'].map(t=><button key={t} onClick={()=>setTf(t)} style={{fontSize:11,padding:'4px 10px',borderRadius:6,border:'1px solid #333',background:tf===t?'#1a1a1a':'transparent',color:tf===t?'#c9a84c':'#888',cursor:'pointer'}}>{t}</button>)}
+
+      {/* MAIN GRID */}
+      <div style={{display:'grid', gridTemplateColumns:'1fr 340px', gap:12, padding:'0 24px 24px'}}>
+
+        {/* PANEL IZQUIERDO */}
+        <div style={{background:'#111', border:'1px solid #222', borderRadius:12, padding:16}}>
+          <div style={{fontSize:14, fontWeight:600, marginBottom:12}}>Analisis - {assets.find(a=>a.n===sel)?.label || sel}</div>
+          <div style={{display:'flex', gap:6, marginBottom:12}}>
+            {['1m','15m','1h','4h','1D'].map(t =>
+              <button key={t} onClick={() => setTf(t)} style={{fontSize:11, padding:'4px 10px', borderRadius:6, border:'1px solid #333', background:tf===t?'#1a1a1a':'transparent', color:tf===t?'#c9a84c':'#888', cursor:'pointer'}}>{t}</button>
+            )}
           </div>
-          <div style={{border:'1px solid #1D9E75',background:'#0a1f17',borderRadius:8,padding:'12px 16px',marginBottom:12}}>
-            <div style={{fontSize:11,color:'#1D9E75',fontWeight:600,marginBottom:4}}>Senal activa - largo</div>
-            <div style={{fontSize:13,color:'#9FE1CB'}}>Estructura alcista confirmada. MAs alineadas. RSI sano.</div>
+          <div style={{border:'1px solid #1D9E75', background:'#0a1f17', borderRadius:8, padding:'12px 16px', marginBottom:12}}>
+            <div style={{fontSize:11, color:'#1D9E75', fontWeight:600, marginBottom:4}}>Senal activa - largo</div>
+            <div style={{fontSize:13, color:'#9FE1CB'}}>Estructura alcista confirmada. MAs alineadas. RSI sano.</div>
           </div>
-          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:8,marginBottom:12}}>
-            <div style={{background:'#0d0d0d',border:'1px solid #222',borderRadius:8,padding:10,textAlign:'center'}}><div style={{fontSize:10,color:'#666'}}>Entrada</div><div style={{fontSize:15,fontWeight:600}}>$414</div></div>
-            <div style={{background:'#0d0d0d',border:'1px solid #222',borderRadius:8,padding:10,textAlign:'center'}}><div style={{fontSize:10,color:'#666'}}>Stop Loss</div><div style={{fontSize:15,fontWeight:600,color:'#D85A30'}}>$407</div></div>
-            <div style={{background:'#0d0d0d',border:'1px solid #222',borderRadius:8,padding:10,textAlign:'center'}}><div style={{fontSize:10,color:'#666'}}>Target</div><div style={{fontSize:15,fontWeight:600,color:'#1D9E75'}}>$430</div></div>
+          <div style={{display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:8, marginBottom:12}}>
+            <div style={{background:'#0d0d0d', border:'1px solid #222', borderRadius:8, padding:10, textAlign:'center'}}><div style={{fontSize:10, color:'#666'}}>Entrada</div><div style={{fontSize:15, fontWeight:600}}>$414</div></div>
+            <div style={{background:'#0d0d0d', border:'1px solid #222', borderRadius:8, padding:10, textAlign:'center'}}><div style={{fontSize:10, color:'#666'}}>Stop Loss</div><div style={{fontSize:15, fontWeight:600, color:'#D85A30'}}>$407</div></div>
+            <div style={{background:'#0d0d0d', border:'1px solid #222', borderRadius:8, padding:10, textAlign:'center'}}><div style={{fontSize:10, color:'#666'}}>Target</div><div style={{fontSize:15, fontWeight:600, color:'#1D9E75'}}>$430</div></div>
           </div>
-          <div style={{display:'grid',gridTemplateColumns:'repeat(5,1fr)',gap:8}}>
-            {[['RSI 6','61.8'],['RSI 12','58.2'],['RSI 24','54.1'],['MA5','412.0'],['MA10','409.4']].map(([l,v])=><div key={l} style={{background:'#0d0d0d',border:'1px solid #222',borderRadius:8,padding:8,textAlign:'center'}}><div style={{fontSize:10,color:'#666'}}>{l}</div><div style={{fontSize:13,fontWeight:600}}>{v}</div></div>)}
+          <div style={{display:'grid', gridTemplateColumns:'repeat(5,1fr)', gap:8}}>
+            {[['RSI 6','61.8'],['RSI 12','58.2'],['RSI 24','54.1'],['MA5','412.0'],['MA10','409.4']].map(([l,v]) =>
+              <div key={l} style={{background:'#0d0d0d', border:'1px solid #222', borderRadius:8, padding:8, textAlign:'center'}}><div style={{fontSize:10, color:'#666'}}>{l}</div><div style={{fontSize:13, fontWeight:600}}>{v}</div></div>
+            )}
           </div>
         </div>
 
-        <div style={{background:'#111',border:'1px solid #222',borderRadius:12,display:'flex',flexDirection:'column',height:'540px'}}>
-          <div style={{padding:'12px 16px',borderBottom:'1px solid #222',display:'flex',alignItems:'center',gap:10}}>
-            <div style={{width:32,height:32,borderRadius:'50%',background:'#1a1040',display:'flex',alignItems:'center',justifyContent:'center',fontSize:16}}>🌙</div>
+        {/* PANEL LUNA */}
+        <div style={{background:'#111', border:'1px solid #222', borderRadius:12, display:'flex', flexDirection:'column', height:'540px'}}>
+          <div style={{padding:'12px 16px', borderBottom:'1px solid #222', display:'flex', alignItems:'center', gap:10}}>
+            <div style={{width:32, height:32, borderRadius:'50%', background:'#1a1040', display:'flex', alignItems:'center', justifyContent:'center', fontSize:16}}>🌙</div>
             <div style={{flex:1}}>
-              <div style={{fontSize:13,fontWeight:600}}>Luna</div>
-              <div style={{fontSize:11,color:'#1D9E75'}}>Trade Coach - en linea</div>
+              <div style={{fontSize:13, fontWeight:600}}>Luna</div>
+              <div style={{fontSize:11, color:'#1D9E75'}}>Trade Coach - en linea</div>
             </div>
-            <div style={{display:'flex',gap:4}}>
+            <div style={{display:'flex', gap:4}}>
               <button
-                onClick={()=>setMode('long')}
-                style={{fontSize:10,padding:'3px 10px',borderRadius:4,border:`1px solid ${mode==='long'?'#1D9E75':'#333'}`,background:mode==='long'?'rgba(29,158,117,0.1)':'transparent',color:mode==='long'?'#1D9E75':'#666',cursor:'pointer',fontWeight:mode==='long'?700:400}}
+                onClick={() => setMode('long')}
+                style={{fontSize:10, padding:'3px 10px', borderRadius:4, border:`1px solid ${mode==='long'?'#1D9E75':'#333'}`, background:mode==='long'?'rgba(29,158,117,0.1)':'transparent', color:mode==='long'?'#1D9E75':'#666', cursor:'pointer', fontWeight:mode==='long'?700:400}}
               >▲ LONG</button>
               <button
-                onClick={()=>setMode('short')}
-                style={{fontSize:10,padding:'3px 10px',borderRadius:4,border:`1px solid ${mode==='short'?'#e05252':'#333'}`,background:mode==='short'?'rgba(224,82,82,0.1)':'transparent',color:mode==='short'?'#e05252':'#666',cursor:'pointer',fontWeight:mode==='short'?700:400}}
+                onClick={() => setMode('short')}
+                style={{fontSize:10, padding:'3px 10px', borderRadius:4, border:`1px solid ${mode==='short'?'#e05252':'#333'}`, background:mode==='short'?'rgba(224,82,82,0.1)':'transparent', color:mode==='short'?'#e05252':'#666', cursor:'pointer', fontWeight:mode==='short'?700:400}}
               >▼ SHORT</button>
             </div>
           </div>
 
-          {mode==='short'&&(
-            <div style={{padding:'6px 14px',background:'rgba(224,82,82,0.07)',borderBottom:'1px solid rgba(224,82,82,0.2)',fontSize:10,color:'#e05252',letterSpacing:'0.5px'}}>
+          {mode==='short' && (
+            <div style={{padding:'6px 14px', background:'rgba(224,82,82,0.07)', borderBottom:'1px solid rgba(224,82,82,0.2)', fontSize:10, color:'#e05252', letterSpacing:'0.5px'}}>
               ⚠️ MODO SHORT — Riesgo elevado. Luna verifica las 3 condiciones antes de aprobar.
             </div>
           )}
 
-          <div style={{padding:12,flex:1,display:'flex',flexDirection:'column',gap:8,overflowY:'auto'}}>
-            {msgs.map((m,i)=>(
-              <div key={i} style={{display:'flex',flexDirection:'column',alignItems:m.f==='l'?'flex-start':'flex-end'}}>
-                {m.imgs&&m.imgs.length>0&&(
-                  <div style={{display:'flex',gap:4,flexWrap:'wrap',marginBottom:4,justifyContent:m.f==='l'?'flex-start':'flex-end'}}>
-                    {m.imgs.map((img,idx)=><img key={idx} src={img} style={{maxHeight:60,maxWidth:80,borderRadius:4,objectFit:'cover'}} alt="chart"/>)}
+          <div style={{padding:12, flex:1, display:'flex', flexDirection:'column', gap:8, overflowY:'auto'}}>
+            {msgs.map((m,i) => (
+              <div key={i} style={{display:'flex', flexDirection:'column', alignItems:m.f==='l'?'flex-start':'flex-end'}}>
+                {m.imgs && m.imgs.length > 0 && (
+                  <div style={{display:'flex', gap:4, flexWrap:'wrap', marginBottom:4, justifyContent:m.f==='l'?'flex-start':'flex-end'}}>
+                    {m.imgs.map((img,idx) => <img key={idx} src={img} style={{maxHeight:60, maxWidth:80, borderRadius:4, objectFit:'cover'}} alt="chart"/>)}
                   </div>
                 )}
-                <div style={{
-                  padding:'8px 12px',borderRadius:8,fontSize:12,lineHeight:1.6,
-                  background:m.f==='l'?'#0d0d0d':'#1a1040',
-                  border:m.f==='l'?'1px solid #222':'1px solid #3d2e8a',
-                  color:m.f==='l'?'#ccc':'#b8a9f0',
-                  maxWidth:'92%',whiteSpace:'pre-wrap'
-                }}>{m.t}</div>
+                <div style={{padding:'8px 12px', borderRadius:8, fontSize:12, lineHeight:1.6, background:m.f==='l'?'#0d0d0d':'#1a1040', border:m.f==='l'?'1px solid #222':'1px solid #3d2e8a', color:m.f==='l'?'#ccc':'#b8a9f0', maxWidth:'92%', whiteSpace:'pre-wrap'}}>{m.t}</div>
               </div>
             ))}
-            {loading&&<div style={{padding:'8px 12px',borderRadius:8,fontSize:12,background:'#0d0d0d',border:'1px solid #222',color:'#666'}}>Luna analizando...</div>}
+            {loading && <div style={{padding:'8px 12px', borderRadius:8, fontSize:12, background:'#0d0d0d', border:'1px solid #222', color:'#666'}}>Luna analizando...</div>}
           </div>
 
-          {images.length>0&&(
-            <div style={{padding:'8px 12px',borderTop:'1px solid #222',display:'flex',gap:6,flexWrap:'wrap'}}>
-              {images.map((img,i)=>(
+          {images.length > 0 && (
+            <div style={{padding:'8px 12px', borderTop:'1px solid #222', display:'flex', gap:6, flexWrap:'wrap'}}>
+              {images.map((img,i) => (
                 <div key={i} style={{position:'relative'}}>
-                  <img src={img} style={{height:50,width:60,objectFit:'cover',borderRadius:4}} alt="preview"/>
-                  <button onClick={()=>removeImage(i)} style={{position:'absolute',top:-4,right:-4,width:16,height:16,borderRadius:'50%',background:'#D85A30',border:'none',color:'white',fontSize:10,cursor:'pointer'}}>x</button>
+                  <img src={img} style={{height:50, width:60, objectFit:'cover', borderRadius:4}} alt="preview"/>
+                  <button onClick={() => removeImage(i)} style={{position:'absolute', top:-4, right:-4, width:16, height:16, borderRadius:'50%', background:'#D85A30', border:'none', color:'white', fontSize:10, cursor:'pointer'}}>x</button>
                 </div>
               ))}
             </div>
           )}
 
-          <div style={{padding:'10px 12px',borderTop:'1px solid #222',display:'flex',gap:8,alignItems:'center'}}>
+          <div style={{padding:'10px 12px', borderTop:'1px solid #222', display:'flex', gap:8, alignItems:'center'}}>
             <input ref={fileRef} type="file" accept="image/*" multiple style={{display:'none'}} onChange={handleImages}/>
-            <button onClick={()=>fileRef.current.click()} title="Subir charts" style={{fontSize:18,padding:'4px 8px',borderRadius:6,border:'1px solid #333',background:'transparent',color:'#c9a84c',cursor:'pointer'}}>📷</button>
-            <input value={inp} onChange={e=>setInp(e.target.value)} onKeyDown={e=>e.key==='Enter'&&send()} placeholder="Preguntale a Luna o sube charts..." style={{flex:1,fontSize:12,padding:'6px 10px',borderRadius:6,border:'1px solid #333',background:'#0d0d0d',color:'#e0e0e0'}}/>
-            <button onClick={send} disabled={loading} style={{fontSize:12,padding:'6px 12px',borderRadius:6,border:`1px solid ${mode==='short'?'#e05252':'#c9a84c'}`,background:'transparent',color:mode==='short'?'#e05252':'#c9a84c',cursor:'pointer',opacity:loading?0.5:1}}>Enviar</button>
+            <button onClick={() => fileRef.current.click()} title="Subir charts" style={{fontSize:18, padding:'4px 8px', borderRadius:6, border:'1px solid #333', background:'transparent', color:'#c9a84c', cursor:'pointer'}}>📷</button>
+            <input value={inp} onChange={e => setInp(e.target.value)} onKeyDown={e => e.key==='Enter' && send()} placeholder="Preguntale a Luna o sube charts..." style={{flex:1, fontSize:12, padding:'6px 10px', borderRadius:6, border:'1px solid #333', background:'#0d0d0d', color:'#e0e0e0'}}/>
+            <button onClick={send} disabled={loading} style={{fontSize:12, padding:'6px 12px', borderRadius:6, border:`1px solid ${mode==='short'?'#e05252':'#c9a84c'}`, background:'transparent', color:mode==='short'?'#e05252':'#c9a84c', cursor:'pointer', opacity:loading?0.5:1}}>Enviar</button>
           </div>
         </div>
       </div>
