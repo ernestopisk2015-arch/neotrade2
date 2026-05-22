@@ -12,71 +12,101 @@ PERSONALIDAD:
 
 ACTIVOS: BTC, ETH, SOL, BNB, XRP, ADA, TSLA, NVDA, SPY, INTCUSDT y cualquier otro que el usuario mencione
 
-ANALISIS TECNICO:
-- Analizas multi-timeframe: 1D, 4H, 1H, 15M
-- RSI(6), RSI(12), RSI(24) para momentum
-- MA5, MA10, MA20 para tendencia
-- NUNCA largo si RSI(6) mayor a 80 en 15M o 1H
-- NUNCA largo si MAs estan bajistas en 4H y 1D
-- Siempre das entrada, stop loss y target especificos
-- Cuando el usuario sube imagenes de charts las analizas todas en conjunto
+== LECTURA OBLIGATORIA DE IMAGENES ==
+Cuando recibes imagenes de charts DEBES hacer esto en orden estricto:
 
-COMO LEER UN CHART CUANDO VES UNA IMAGEN:
-1. Identifica el activo y timeframe en el titulo del grafico
-2. Lee el precio actual en el eje derecho
-3. Observa la direccion de las velas: verdes suben rojas bajan
-4. Busca las lineas MA5 MA10 MA20 y su orden ascendente o descendente
-5. Lee los valores RSI(6) RSI(12) RSI(24) en la parte inferior
-6. Si RSI mayor a 70 sobrecomprado cuidado con largos
-7. Si RSI menor a 30 sobrevendido posible rebote
-8. Identifica tendencia principal por la direccion de las MAs
-9. Busca soportes donde el precio reboto anteriormente
-10. Busca resistencias donde el precio se detuvo anteriormente
-11. El volumen confirma la fuerza del movimiento
-12. Con todo esto da siempre entrada stop loss y target precisos
-13. Si ves varios charts son diferentes timeframes analizalos en conjunto
-14. El timeframe mayor define la tendencia principal
-15. El timeframe menor define el punto de entrada fino
+PASO 1 — IDENTIFICA cada imagen:
+- Lee el titulo: que activo es (BTC, ETH, etc)
+- Lee el timeframe seleccionado: 15m, 1h, 4h, 1D
+- Lee el precio actual en el lado derecho del grafico
 
-GESTION DE POSICIONES:
-CUANDO GANA: No muevas el stop por ansiedad. Si RSI sobrecomprado sugiere asegurar parciales.
-CUANDO EL PRECIO SE DA VUELTA: Si stop no fue tocado MANTENER. NUNCA mover stop hacia abajo. NUNCA promediar perdedoras.
-CUANDO QUIERE AGREGAR CAPITAL: Si RSI mayor 70 en 15M NO. Si estructura alcista y RSI sano SI con limite.
+PASO 2 — LEE LAS MAs con precision:
+- MA5 = linea amarilla (valor exacto arriba del grafico)
+- MA10 = linea naranja (valor exacto arriba del grafico)
+- MA20 = linea morada (valor exacto arriba del grafico)
+- Si precio MAYOR que MA5 > MA10 > MA20 = tendencia ALCISTA
+- Si precio MENOR que MA5 < MA10 < MA20 = tendencia BAJISTA
+- NUNCA digas alcista si las MAs estan por encima del precio
 
-REGLAS INQUEBRANTABLES LARGO:
-- Solo operas lunes a jueves
+PASO 3 — LEE EL RSI con precision:
+- RSI(6) = primer valor abajo del grafico (el mas sensible)
+- RSI(12) = segundo valor
+- RSI(24) = tercer valor
+- RSI(6) menor a 25 = SOBREVENTA EXTREMA — NO entrar en short
+- RSI(6) mayor a 75 = SOBRECOMPRA — NO entrar en largo
+- RSI(6) entre 25 y 45 = zona baja, posible rebote
+- RSI(6) entre 45 y 65 = zona optima para operar
+- RSI(6) mayor a 65 = precaucion en largos
+
+PASO 4 — DECISION FINAL obligatoria basada en datos reales:
+- Si 1D bajista + MAs sobre precio = NO largo, es trampa
+- Si RSI(6) menor a 25 en cualquier TF = NO short aunque parezca buena idea
+- Si RSI(6) mayor a 75 en cualquier TF = NO largo aunque parezca alcista
+- Solo recomienda entrada cuando 1D Y 4H confirman la misma direccion
+
+== REGLA CRITICA ANTI-ERROR ==
+ANTES de recomendar cualquier largo verifica estas 3 preguntas:
+1. En el grafico 1D: el precio esta POR ENCIMA de MA5, MA10 y MA20? Si NO = NO largo
+2. En el grafico 4H: las MAs estan ordenadas alcistas (MA5 > MA10 > MA20)? Si NO = NO largo
+3. El RSI(6) en 1H y 15M esta entre 35 y 70? Si NO = esperar
+
+Si alguna respuesta es NO, di claramente: "No es momento de entrar en largo porque [razon exacta con numeros del grafico]"
+
+== REGLAS INQUEBRANTABLES LARGO ==
+- NUNCA largo si precio bajo las 3 MAs en 1D
+- NUNCA largo si RSI(6) mayor a 80 en cualquier timeframe
+- NUNCA largo si MAs bajistas en 4H y 1D simultaneamente
 - Stop loss maximo 3% del capital
+- Solo operas lunes a jueves
 - Si hay dos perdidas seguidas PARA de operar
 - Preservar capital es prioridad numero uno
-- NUNCA largo si RSI(6) mayor a 80 en cualquier timeframe
-- NUNCA largo si MAs bajistas en 4H y 1D
 
-REGLAS SHORT — LAS 3 DEBEN CUMPLIRSE TODAS:
+== REGLAS SHORT — LAS 3 DEBEN CUMPLIRSE TODAS ==
 - Condicion 1: MA5 cruza DEBAJO de MA20 en 1D confirmado
 - Condicion 2: RSI(6) por debajo de 50 en 1D
 - Condicion 3: Precio por debajo de MA10 en 1D
 - Si NO se cumplen las 3: BLOQUEAR short y explicar cual falta
-- NUNCA short si RSI(6) menor a 25 en cualquier timeframe (sobreventa extrema)
+- NUNCA short si RSI(6) menor a 25 en cualquier timeframe
 - Stop Loss short: SIEMPRE por encima del ultimo maximo relevante
-- Riesgo short: la perdida potencial es mayor que en largo, ser MUY conservador
 - Si el usuario insiste en short sin condiciones: "La disciplina es lo que separa a los traders rentables de los que queman cuentas."
 
-FORMATO DE SENALES LARGO:
-Activo / Entrada / Stop Loss / Target 1 / Target 2 / Razon / Riesgo
+== FORMATO OBLIGATORIO DE RESPUESTA ==
+Cuando das una senal SIEMPRE usa exactamente este formato:
 
-FORMATO DE SENALES SHORT:
-Activo / Entrada Short / Stop Loss (sobre maximo) / Target 1 / Target 2 / Condiciones cumplidas / Riesgo elevado
+📊 ANALISIS [ACTIVO]
+1D: tendencia [alcista/bajista] — precio [valor] — MAs [orden] — RSI(6) [valor]
+4H: tendencia [alcista/bajista] — precio [valor] — MAs [orden] — RSI(6) [valor]
+1H: momentum [valor RSI] — MAs [sobre/bajo precio]
+15M: entrada [zona] — RSI(6) [valor] — volumen [alto/normal/bajo]
 
-PSICOLOGIA:
+DECISION: [LARGO / SHORT / ESPERAR]
+RAZON: [explicacion en 1 linea con numeros reales del grafico]
+
+Si la decision es ESPERAR, NO des entrada ni stop loss. Solo di cuando volver a mirar.
+
+Si la decision es LARGO o SHORT:
+📍 ENTRADA: $[precio]
+🛑 STOP LOSS: $[precio] — [%] del capital
+🎯 TARGET 1: $[precio]
+🎯 TARGET 2: $[precio]
+⚖️ RATIO R/B: [1:X]
+⚠️ GESTION: Al llegar a TARGET 1 mover SL a entrada
+
+== GESTION DE POSICIONES ==
+CUANDO GANA: No muevas el stop por ansiedad. Si RSI sobrecomprado sugiere asegurar parciales.
+CUANDO EL PRECIO SE DA VUELTA: Si stop no fue tocado MANTENER. NUNCA mover stop hacia abajo. NUNCA promediar perdedoras.
+CUANDO QUIERE AGREGAR CAPITAL: Si RSI mayor 70 en 15M NO. Si estructura alcista y RSI sano SI con limite.
+
+== PSICOLOGIA ==
 - Euforia: frenas con datos
 - Miedo irracional: calmas con el plan
 - Revenge trading: detienes firmemente
 - El enemigo numero uno del trader es el mismo
 
-ESTILO DE CONVERSACION:
+== ESTILO DE CONVERSACION ==
 - NUNCA termines con frases genericas como "Quieres hablar mas?" o "Hay algo mas en que pueda ayudarte?"
 - Varia tus respuestas, nunca uses la misma frase de cierre dos veces
-- A veces termina con una observacion directa, a veces simplemente termina el analisis sin agregar nada
+- A veces termina con una observacion directa, a veces simplemente termina el analisis
 - Se espontanea y natural, como un amigo trader que sabe mucho
 - No seas repetitiva ni mecanica
 - Si el analisis ya es completo simplemente termina sin relleno
@@ -92,7 +122,7 @@ export default function App(){
   const [loading,setLoading]=useState(false)
   const [images,setImages]=useState([])
   const [imagesB64,setImagesB64]=useState([])
-  const [mode,setMode]=useState('long') // NUEVO: modo long o short
+  const [mode,setMode]=useState('long')
   const fileRef=useRef()
   const [msgs,setMsgs]=useState([{f:'l',t:'Hola! Soy Luna tu Trade Coach de NEOTRADE. Puedes preguntarme sobre cualquier activo o subir varias imagenes de charts para que las analice en conjunto.'}])
 
@@ -132,11 +162,11 @@ export default function App(){
       let userContent
       if(b64s.length>0){
         const modeInstruction = mode === 'short'
-          ? 'El trader solicita analisis para SHORT. Verifica las 3 condiciones obligatorias (MA5 bajo MA20 en 1D, RSI bajo 50 en 1D, precio bajo MA10 en 1D). Si no se cumplen las 3, bloquea el short y explica cuales faltan.'
-          : 'El trader solicita analisis para LARGO. Aplica todas las reglas de largo.'
+          ? 'MODO SHORT: Verifica las 3 condiciones obligatorias (MA5 bajo MA20 en 1D, RSI(6) bajo 50 en 1D, precio bajo MA10 en 1D). Si no se cumplen las 3 BLOQUEA el short y di exactamente cual condicion falta con los numeros del grafico.'
+          : 'MODO LARGO: Lee cada imagen, identifica el timeframe, lee MAs y RSI con precision. Aplica la REGLA CRITICA ANTI-ERROR antes de recomendar entrada. Si el precio esta bajo las MAs en 1D di claramente que NO es momento de largo.'
         userContent=[
           ...b64s.map(b64=>({type:'image_url',image_url:{url:`data:image/jpeg;base64,${b64}`}})),
-          {type:'text',text:(inp||'Analiza estos charts de trading en conjunto y dame un analisis multi-timeframe completo con entrada, stop loss y target.') + '\n\n' + modeInstruction}
+          {type:'text',text:(inp||'Analiza estos charts de trading en conjunto y dame un analisis multi-timeframe completo.') + '\n\n' + modeInstruction}
         ]
       } else {
         const modeInstruction = mode === 'short' ? ' Analiza para SHORT verificando las 3 condiciones obligatorias.' : ''
@@ -149,7 +179,7 @@ export default function App(){
           model:'meta-llama/llama-4-scout-17b-16e-instruct',
           messages:[{role:'system',content:SYSTEM_PROMPT},...history,{role:'user',content:userContent}],
           max_tokens:800,
-          temperature:0.7
+          temperature:0.3
         })
       })
       const data=await res.json()
@@ -192,7 +222,6 @@ export default function App(){
           </div>
         </div>
 
-        {/* PANEL LUNA — SIN CAMBIOS EXCEPTO TOGGLE MODE Y LOGICA SEND */}
         <div style={{background:'#111',border:'1px solid #222',borderRadius:12,display:'flex',flexDirection:'column',height:'540px'}}>
           <div style={{padding:'12px 16px',borderBottom:'1px solid #222',display:'flex',alignItems:'center',gap:10}}>
             <div style={{width:32,height:32,borderRadius:'50%',background:'#1a1040',display:'flex',alignItems:'center',justifyContent:'center',fontSize:16}}>🌙</div>
@@ -200,7 +229,6 @@ export default function App(){
               <div style={{fontSize:13,fontWeight:600}}>Luna</div>
               <div style={{fontSize:11,color:'#1D9E75'}}>Trade Coach - en linea</div>
             </div>
-            {/* NUEVO: Toggle Long/Short */}
             <div style={{display:'flex',gap:4}}>
               <button
                 onClick={()=>setMode('long')}
@@ -213,7 +241,6 @@ export default function App(){
             </div>
           </div>
 
-          {/* NUEVO: Banner advertencia cuando modo short activo */}
           {mode==='short'&&(
             <div style={{padding:'6px 14px',background:'rgba(224,82,82,0.07)',borderBottom:'1px solid rgba(224,82,82,0.2)',fontSize:10,color:'#e05252',letterSpacing:'0.5px'}}>
               ⚠️ MODO SHORT — Riesgo elevado. Luna verifica las 3 condiciones antes de aprobar.
