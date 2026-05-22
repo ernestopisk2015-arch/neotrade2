@@ -172,6 +172,31 @@ export default function App(){
   const chatRef = useRef()
   const [msgs, setMsgs] = useState([{f:'l', t:'Hola! Soy Luna tu Trade Coach de NEOTRADE.\n\nSube las imagenes de tus charts (1D, 4H, 1H, 15m) y las analizo en conjunto. Selecciona modo LARGO o SHORT antes de enviar.'}])
 
+  // Cargar config del servidor al iniciar
+  useEffect(() => {
+    const loadConfig = async () => {
+      try {
+        const res = await fetch('/api/config')
+        const data = await res.json()
+        if (data.assets && data.assets.length > 0) {
+          setAssets(data.assets)
+        }
+      } catch(e) {}
+    }
+    loadConfig()
+  }, [])
+
+  // Guardar activos en servidor
+  const saveAssetsToServer = async (newAssets) => {
+    try {
+      await fetch('/api/config', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({assets: newAssets, signals: [], news: []})
+      })
+    } catch(e) {}
+  }
+
   useEffect(() => {
     const fetchPrices = async () => {
       try {
@@ -262,19 +287,27 @@ export default function App(){
     setLoading(false)
   }
 
-  const addAsset = () => {
+  const saveAssetsToServer = async (a) => {
+    try { await fetch("/api/config", {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({assets:a,signals:[],news:[]})}) } catch(e) {}
+  }
+
+  const addAsset = async () => {
     if(!newSymbol||!newLabel){setAdminMsg('Completa ambos campos');return}
     const sym = newSymbol.toUpperCase().trim()
     if(assets.find(a=>a.n===sym)){setAdminMsg('Ya existe');return}
-    setAssets(prev=>[...prev,{n:sym,label:newLabel.toUpperCase().trim()}])
-    setNewSymbol('');setNewLabel('')
-    setAdminMsg('✅ Agregado: '+sym)
+    const na = [...assets, {n:sym, label:newLabel.toUpperCase().trim()}]
+    setAssets(na)
+    setNewSymbol(''); setNewLabel('')
+    await saveAssetsToServer(na)
+    setAdminMsg('✅ Guardado en servidor: '+sym)
   }
 
-  const removeAsset = (sym) => {
-    setAssets(prev=>prev.filter(a=>a.n!==sym))
-    if(sel===sym) setSel(assets[0]?.n||'')
-    setAdminMsg('🗑 Eliminado: '+sym)
+  const removeAsset = async (sym) => {
+    const na = assets.filter(a=>a.n!==sym)
+    setAssets(na)
+    if(sel===sym) setSel(na[0]?.n||'')
+    await saveAssetsToServer(na)
+    setAdminMsg('🗑 Eliminado y guardado: '+sym)
   }
 
   const loginAdmin = () => {
